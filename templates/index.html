@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#0b1017">
+  <title>{{ app_name }}</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topbar">
+    <div><div class="eyebrow">XMR / RandomX</div><h1>XMRig Unified WebUI</h1></div>
+    <div class="top-actions">
+      <span id="refreshState" class="muted">Caricamento…</span>
+      <button id="refreshBtn" class="btn secondary">Aggiorna</button>
+      <button id="settingsBtn" class="btn">Impostazioni</button>
+    </div>
+  </header>
+  <main>
+    <section class="cards">
+      <article class="card metric"><span>XMR da pagare</span><strong id="pendingXmr">—</strong><small id="poolName">Pool non configurata</small></article>
+      <article class="card metric"><span>XMR pagati</span><strong id="paidXmr">—</strong><small>totale pool</small></article>
+      <article class="card metric"><span>Hashrate pool</span><strong id="poolHashrate">—</strong><small>stimato dalle share</small></article>
+      <article class="card metric"><span>Hashrate live</span><strong id="localHashrate">—</strong><small>somma API XMRig</small></article>
+      <article class="card metric"><span>Server online</span><strong id="onlineMiners">—</strong><small id="configuredMiners">— configurati</small></article>
+      <article class="card metric"><span>Temperatura max</span><strong id="maxTemp">—</strong><small>richiede agent</small></article>
+    </section>
+
+    <section class="grid two">
+      <article class="card panel">
+        <div class="panel-head"><div><div class="eyebrow">Storico locale</div><h2>Hashrate complessivo</h2></div>
+        <select id="historyHours"><option value="1">1 ora</option><option value="6" selected>6 ore</option><option value="12">12 ore</option><option value="24">24 ore</option><option value="72">3 giorni</option></select></div>
+        <canvas id="hashChart" height="210"></canvas>
+      </article>
+      <article class="card panel">
+        <div class="panel-head"><div><div class="eyebrow">Sensori</div><h2>Temperatura CPU</h2></div><span class="legend"><i></i> max nodi</span></div>
+        <canvas id="tempChart" height="210"></canvas>
+      </article>
+    </section>
+
+    <section class="card panel">
+      <div class="panel-head"><div><div class="eyebrow">API XMRig</div><h2>Server</h2></div><button class="btn small" id="addMinerBtn">+ Aggiungi server</button></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Server</th><th>Stato</th><th>10s</th><th>60s</th><th>15m</th><th>CPU °C</th><th>Share</th><th>Pool</th><th></th></tr></thead>
+        <tbody id="minersBody"><tr><td colspan="9" class="empty">Nessun server configurato</td></tr></tbody>
+      </table></div>
+    </section>
+
+    <section class="grid two">
+      <article class="card panel">
+        <div class="panel-head"><div><div class="eyebrow">Pool</div><h2>Worker della pool</h2></div><span id="poolStatus" class="status neutral">non configurata</span></div>
+        <div class="table-wrap compact"><table>
+          <thead><tr><th>Worker</th><th>Hashrate</th><th>Algo</th><th>Valid</th><th>Invalid</th></tr></thead>
+          <tbody id="poolWorkersBody"><tr><td colspan="5" class="empty">Inserisci wallet e pool</td></tr></tbody>
+        </table></div>
+      </article>
+      <article class="card panel">
+        <div class="panel-head"><div><div class="eyebrow">Connessione</div><h2>Riepilogo pool</h2></div></div>
+        <dl class="details">
+          <div><dt>Pool</dt><dd id="detailPool">—</dd></div>
+          <div><dt>API</dt><dd id="detailApi">—</dd></div>
+          <div><dt>Share valide</dt><dd id="detailValid">—</dd></div>
+          <div><dt>Share invalide</dt><dd id="detailInvalid">—</dd></div>
+          <div><dt>Hash totali</dt><dd id="detailHashes">—</dd></div>
+        </dl>
+      </article>
+    </section>
+  </main>
+
+  <dialog id="settingsDialog">
+    <form method="dialog" class="dialog-card" id="settingsForm">
+      <div class="dialog-head"><div><div class="eyebrow">Persistente in SQLite</div><h2>Impostazioni pool</h2></div><button value="cancel" class="icon-btn" aria-label="Chiudi">×</button></div>
+      <label>Link pool<input id="poolUrl" placeholder="https://supportxmr.com oppure https://moneroocean.stream"></label>
+      <label>Wallet Monero<input id="wallet" placeholder="4... / 8..."></label>
+      <p class="hint">SupportXMR e MoneroOcean vengono riconosciute automaticamente dal link. Il wallet resta nel volume Docker, non nel repository.</p>
+      <div class="dialog-actions"><button value="cancel" class="btn secondary">Annulla</button><button type="button" id="saveSettings" class="btn">Salva</button></div>
+    </form>
+  </dialog>
+
+  <dialog id="minerDialog">
+    <form method="dialog" class="dialog-card" id="minerForm">
+      <div class="dialog-head"><div><div class="eyebrow">Nuovo nodo</div><h2>Aggiungi server XMRig</h2></div><button value="cancel" class="icon-btn" aria-label="Chiudi">×</button></div>
+      <label>Nome<input id="minerName" placeholder="Fedora44"></label>
+      <label>API XMRig<input id="minerApi" placeholder="http://192.168.1.20:18088"></label>
+      <label>Agent temperatura <span class="optional">opzionale</span><input id="minerAgent" placeholder="http://192.168.1.20:18089"></label>
+      <label>Token API <span class="optional">opzionale</span><input id="minerToken" type="password" autocomplete="off"></label>
+      <div class="dialog-actions"><button value="cancel" class="btn secondary">Annulla</button><button type="button" id="saveMiner" class="btn">Salva server</button></div>
+    </form>
+  </dialog>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>
