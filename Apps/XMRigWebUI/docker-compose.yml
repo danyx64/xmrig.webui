@@ -1,0 +1,56 @@
+name: xmrig-webui
+
+services:
+  xmrig-webui:
+    image: ghcr.io/danyx64/xmrig.webui:latest
+    restart: unless-stopped
+    ports:
+      - target: 8080
+        published: ${WEBUI_PORT:-8080}
+        protocol: tcp
+    environment:
+      DB_PATH: /data/xmrig-webui.db
+      REFRESH_SECONDS: "30"
+      HISTORY_DAYS: "7"
+      HTTP_TIMEOUT: "6"
+    volumes:
+      - type: volume
+        source: xmrig-webui-data
+        target: /data
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  xmrig-webui-data:
+
+x-casaos:
+  id: io.github.danyx64.xmrig-webui
+  main: xmrig-webui
+  index: /
+  port_map: ${WEBUI_PORT:-8080}
+  scheme: http
+  icon: https://raw.githubusercontent.com/danyx64/xmrig.webui/main/assets/icon.svg
+  title:
+    en_US: XMRig Unified WebUI
+    it_IT: XMRig Unified WebUI
+  tagline:
+    en_US: One dashboard for XMRig, SupportXMR and MoneroOcean
+    it_IT: Una dashboard per XMRig, SupportXMR e MoneroOcean
+  description:
+    en_US: Self-hosted Monero mining dashboard with persistent pool settings, multiple XMRig nodes, local history and optional CPU temperature agents.
+    it_IT: Dashboard Monero self-hosted con impostazioni pool persistenti, più nodi XMRig, storico locale e agent opzionali per la temperatura CPU.
+  author: danyx64
+  developer: danyx64
+  category: Finance
+  architectures:
+    - amd64
+    - arm64
+  version: "0.1.0"
+  update_at: "2026-09-22"
+  release_notes:
+    en_US: Initial public release.
+    it_IT: Prima release pubblica.
+  website: https://github.com/danyx64/xmrig.webui
+  repo: https://github.com/danyx64/xmrig.webui
+  support: https://github.com/danyx64/xmrig.webui/issues
+  docs: https://github.com/danyx64/xmrig.webui#readme
