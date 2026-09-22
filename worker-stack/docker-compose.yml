@@ -1,0 +1,46 @@
+name: xmrig-worker
+
+services:
+  xmrig:
+    build:
+      context: ..
+      dockerfile: miner/Dockerfile
+      args:
+        XMRIG_VERSION: ${XMRIG_VERSION:-6.26.0}
+    image: xmrig-webui-worker:${XMRIG_VERSION:-6.26.0}
+    restart: unless-stopped
+    network_mode: host
+    privileged: true
+    volumes:
+      - /dev/cpu:/dev/cpu
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+    command:
+      - --coin=monero
+      - --url=${XMR_POOL:-pool.supportxmr.com:3333}
+      - --user=${XMR_WALLET:?set XMR_WALLET in .env}
+      - --pass=${WORKER_NAME:-xmrig-worker}
+      - --api-worker-id=${WORKER_NAME:-xmrig-worker}
+      - --http-host=0.0.0.0
+      - --http-port=18088
+      - --cpu-max-threads-hint=${CPU_THREADS_HINT:-100}
+      - --cpu-no-yield
+      - --print-time=30
+      - --keepalive
+
+  agent:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    image: ghcr.io/danyx64/xmrig.webui:latest
+    command: ["gunicorn", "--bind", "0.0.0.0:18089", "--workers", "1", "--threads", "4", "agent:app"]
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      HOST_SYS: /host/sys
+    volumes:
+      - /sys:/host/sys:ro
+    security_opt:
+      - no-new-privileges:true
