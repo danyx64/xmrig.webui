@@ -7,19 +7,27 @@ services:
     restart: unless-stopped
     ports:
       - target: 8080
-        published: ${WEBUI_PORT:-8080}
+        published: ${WEBUI_PORT:-5300}
         protocol: tcp
     environment:
       DB_PATH: /data/xmrig-webui.db
       REFRESH_SECONDS: "30"
       HISTORY_DAYS: "7"
       HTTP_TIMEOUT: "6"
+      DEFAULT_POOL_URL: "https://supportxmr.com"
+      DEFAULT_WALLET: "${XMR_WALLET}"
+      AUTO_ADD_LOCAL_MINER: "1"
+      DEFAULT_MINER_NAME: "${WORKER_NAME:-zimaos}"
+      DEFAULT_MINER_API: "http://host.docker.internal:18088"
+      DEFAULT_AGENT_URL: "http://host.docker.internal:18089"
     volumes:
       - type: volume
         source: xmrig-webui-data
         target: /data
     security_opt:
       - no-new-privileges:true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     depends_on:
       - xmrig
       - agent
@@ -46,6 +54,8 @@ services:
       - --http-port=18088
       - --cpu-max-threads-hint=${CPU_THREADS_HINT:-100}
       - --cpu-no-yield
+      - --cpu-priority=5
+      - --huge-pages-jit
       - --keepalive
       - --print-time=30
 
@@ -69,7 +79,7 @@ x-casaos:
   id: io.github.danyx64.xmrig-webui.full
   main: dashboard
   index: /
-  port_map: ${WEBUI_PORT:-8080}
+  port_map: ${WEBUI_PORT:-5300}
   scheme: http
   icon: https://raw.githubusercontent.com/danyx64/xmrig.webui/main/assets/icon.svg
   title:
