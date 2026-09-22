@@ -1,0 +1,16 @@
+[Unit]
+Description=XMRig native worker for XMRig Unified WebUI
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=/etc/xmrig-native.env
+ExecStart=/usr/local/bin/xmrig-native-node
+Restart=always
+RestartSec=5
+Nice=-10
+LimitMEMLOCK=infinity
+
+[Install]
+WantedBy=multi-user.target

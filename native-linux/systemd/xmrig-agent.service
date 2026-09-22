@@ -1,0 +1,15 @@
+[Unit]
+Description=XMRig Unified WebUI native temperature agent
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/xmrig-webui-agent
+Environment=HOST_SYS=/sys
+ExecStart=/opt/xmrig-webui-agent/venv/bin/gunicorn --bind 0.0.0.0:18089 --workers 1 --threads 4 --timeout 15 agent:app
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

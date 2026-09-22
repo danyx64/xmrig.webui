@@ -95,6 +95,18 @@ A typical XMRig config section is:
 
 Keep ports `18088` and `18089` limited to a trusted LAN/VPN. Do not expose an unauthenticated miner API directly to the public Internet.
 
+## Native Linux / Fedora miner node
+
+A non-Docker PC can be monitored by the same dashboard. The repository includes a native systemd setup under `native-linux/` that exposes XMRig on port `18088` and the CPU-temperature agent on port `18089`.
+
+```bash
+sudo ./native-linux/install-fedora.sh
+sudo nano /etc/xmrig-native.env
+sudo systemctl restart xmrig-native
+```
+
+See `native-linux/README.md` for the complete setup.
+
 ## CPU temperature agent
 
 XMRig does not provide CPU temperature in its summary API, so this project includes a small read-only Linux sensor agent.
