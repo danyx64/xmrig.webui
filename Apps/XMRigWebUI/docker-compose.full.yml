@@ -3,12 +3,22 @@ name: xmrig-webui-full
 services:
   dashboard:
     image: ghcr.io/danyx64/xmrig.webui:latest
+    pull_policy: always
     container_name: xmrig-webui
     restart: unless-stopped
-    ports:
-      - target: 8080
-        published: ${WEBUI_PORT:-5300}
-        protocol: tcp
+    network_mode: host
+    cpus: 0.000
+    command:
+      - gunicorn
+      - --bind
+      - 0.0.0.0:5300
+      - --workers
+      - "1"
+      - --threads
+      - "8"
+      - --timeout
+      - "30"
+      - app:app
     environment:
       DB_PATH: /data/xmrig-webui.db
       REFRESH_SECONDS: "30"
@@ -17,31 +27,34 @@ services:
       DEFAULT_POOL_URL: "https://supportxmr.com"
       DEFAULT_WALLET: "${XMR_WALLET}"
       AUTO_ADD_LOCAL_MINER: "1"
-      DEFAULT_MINER_NAME: "${WORKER_NAME:-zimaos}"
-      DEFAULT_MINER_API: "http://host.docker.internal:18088"
-      DEFAULT_AGENT_URL: "http://host.docker.internal:18089"
+      DEFAULT_MINER_NAME: "${WORKER_NAME:-ZimaOS}"
+      DEFAULT_MINER_API: "http://127.0.0.1:18088"
+      DEFAULT_AGENT_URL: "http://127.0.0.1:18089"
     volumes:
-      - type: volume
-        source: xmrig-webui-data
+      - type: bind
+        source: /DATA/AppData/xmrig-webui/data
         target: /data
     security_opt:
       - no-new-privileges:true
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
     depends_on:
       - xmrig
       - agent
 
   xmrig:
     image: ghcr.io/danyx64/xmrig.webui:miner-6.26.0
+    pull_policy: always
     container_name: xmrig-miner
     restart: unless-stopped
     privileged: true
     network_mode: host
+    cpus: 0.000
+    cpu_shares: 1024
     environment:
       XMRIG_THREADS: ${XMRIG_THREADS:-all}
     volumes:
-      - /dev/cpu:/dev/cpu
+      - type: bind
+        source: /dev/cpu
+        target: /dev/cpu
     ulimits:
       memlock:
         soft: -1
@@ -50,11 +63,11 @@ services:
       - --coin=monero
       - --url=${XMR_POOL:-pool.supportxmr.com:3333}
       - --user=${XMR_WALLET:?set XMR_WALLET}
-      - --pass=${WORKER_NAME:-zimaos}
-      - --api-worker-id=${WORKER_NAME:-zimaos}
+      - --pass=${WORKER_NAME:-ZimaOS}
+      - --api-worker-id=${WORKER_NAME:-ZimaOS}
       - --http-host=0.0.0.0
       - --http-port=18088
-      - --cpu-max-threads-hint=${CPU_THREADS_HINT:-100}
+      - --cpu-max-threads-hint=100
       - --cpu-no-yield
       - --cpu-priority=5
       - --huge-pages-jit
@@ -63,25 +76,35 @@ services:
 
   agent:
     image: ghcr.io/danyx64/xmrig.webui:latest
+    pull_policy: always
     container_name: xmrig-temp-agent
-    command: ["gunicorn", "--bind", "0.0.0.0:18089", "--workers", "1", "--threads", "4", "agent:app"]
     restart: unless-stopped
     network_mode: host
+    cpus: 0.000
+    command:
+      - gunicorn
+      - --bind
+      - 0.0.0.0:18089
+      - --workers
+      - "1"
+      - --threads
+      - "4"
+      - agent:app
     environment:
       HOST_SYS: /host/sys
     volumes:
-      - /sys:/host/sys:ro
+      - type: bind
+        source: /sys
+        target: /host/sys
+        read_only: true
     security_opt:
       - no-new-privileges:true
-
-volumes:
-  xmrig-webui-data:
 
 x-casaos:
   id: io.github.danyx64.xmrig-webui.full
   main: dashboard
   index: /
-  port_map: ${WEBUI_PORT:-5300}
+  port_map: "5300"
   scheme: http
   icon: https://raw.githubusercontent.com/danyx64/xmrig.webui/main/assets/icon.svg
   title:
@@ -98,7 +121,7 @@ x-casaos:
   category: Finance
   architectures:
     - amd64
-  version: "0.3.0"
+  version: "0.4.0"
   update_at: "2026-09-22"
   website: https://github.com/danyx64/xmrig.webui
   repo: https://github.com/danyx64/xmrig.webui
