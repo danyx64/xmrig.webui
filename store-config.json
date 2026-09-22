@@ -1,0 +1,9 @@
+{
+  "store_id": "io.github.danyx64.xmrig-webui-store",
+  "name": {"en_US": "XMRig WebUI Apps", "it_IT": "XMRig WebUI Apps"},
+  "maintainer": "danyx64",
+  "description": {
+    "en_US": "ZimaOS/CasaOS packages for XMRig Unified WebUI.",
+    "it_IT": "Pacchetti ZimaOS/CasaOS per XMRig Unified WebUI."
+  }
+}
