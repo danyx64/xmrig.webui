@@ -1,0 +1,96 @@
+name: xmrig-node
+
+services:
+  xmrig:
+    image: ghcr.io/danyx64/xmrig.webui:miner-6.26.0
+    container_name: xmrig-node-miner
+    restart: unless-stopped
+    privileged: true
+    network_mode: host
+
+    volumes:
+      - /dev/cpu:/dev/cpu
+
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+    command:
+      - --coin=monero
+      - --url=${XMR_POOL:-pool.supportxmr.com:3333}
+      - --user=${XMR_WALLET:?set XMR_WALLET}
+      - --pass=${WORKER_NAME:-xmrig-node}
+      - --api-worker-id=${WORKER_NAME:-xmrig-node}
+
+      - --http-host=0.0.0.0
+      - --http-port=18088
+
+      - --cpu-max-threads-hint=${CPU_THREADS_HINT:-100}
+      - --cpu-no-yield
+      - --cpu-priority=5
+      - --huge-pages-jit
+
+      - --keepalive
+      - --print-time=30
+
+  agent:
+    image: ghcr.io/danyx64/xmrig.webui:latest
+    container_name: xmrig-node-agent
+    restart: unless-stopped
+    network_mode: host
+
+    command:
+      - gunicorn
+      - --bind
+      - 0.0.0.0:18089
+      - --workers
+      - "1"
+      - --threads
+      - "4"
+      - agent:app
+
+    environment:
+      HOST_SYS: /host/sys
+
+    volumes:
+      - /sys:/host/sys:ro
+
+    security_opt:
+      - no-new-privileges:true
+
+x-casaos:
+  id: io.github.danyx64.xmrig-webui.node
+  main: xmrig
+  index: /
+  port_map: "18088"
+  scheme: http
+
+  icon: https://raw.githubusercontent.com/danyx64/xmrig.webui/main/assets/icon.svg
+
+  title:
+    en_US: XMRig Node
+    it_IT: XMRig Node
+
+  tagline:
+    en_US: Remote XMRig worker for XMRig Unified WebUI
+    it_IT: Nodo XMRig remoto per XMRig Unified WebUI
+
+  description:
+    en_US: Headless XMRig worker with CPU temperature agent. Designed to be monitored by a separate XMRig Unified WebUI dashboard.
+    it_IT: Worker XMRig senza WebUI con agent per la temperatura CPU. Pensato per essere monitorato da una dashboard XMRig Unified WebUI separata.
+
+  author: danyx64
+  developer: danyx64
+  category: Finance
+
+  architectures:
+    - amd64
+
+  version: "0.1.0"
+  update_at: "2026-09-22"
+
+  website: https://github.com/danyx64/xmrig.webui
+  repo: https://github.com/danyx64/xmrig.webui
+  support: https://github.com/danyx64/xmrig.webui/issues
+  docs: https://github.com/danyx64/xmrig.webui#readme
