@@ -1,0 +1,22 @@
+name: xmrig-webui-agent
+
+services:
+  agent:
+    build: .
+    image: ghcr.io/danyx64/xmrig.webui:latest
+    container_name: xmrig-webui-agent
+    command: ["gunicorn", "--bind", "0.0.0.0:18089", "--workers", "1", "--threads", "4", "agent:app"]
+    restart: unless-stopped
+    ports:
+      - "${AGENT_PORT:-18089}:18089"
+    environment:
+      HOST_SYS: /host/sys
+    volumes:
+      - /sys:/host/sys:ro
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18089/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
