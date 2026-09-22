@@ -3,6 +3,7 @@ name: xmrig-node
 services:
   xmrig:
     image: ghcr.io/danyx64/xmrig.webui:miner-6.26.0
+    pull_policy: always
     container_name: xmrig-node-miner
     restart: unless-stopped
     privileged: true
@@ -38,6 +39,7 @@ services:
 
   agent:
     image: ghcr.io/danyx64/xmrig.webui:latest
+    pull_policy: always
     container_name: xmrig-node-agent
     restart: unless-stopped
     network_mode: host
