@@ -14,6 +14,12 @@ DB_PATH = os.environ.get("DB_PATH", "/data/xmrig-webui.db")
 REFRESH_SECONDS = max(10, int(os.environ.get("REFRESH_SECONDS", "30")))
 HISTORY_DAYS = max(1, int(os.environ.get("HISTORY_DAYS", "7")))
 HTTP_TIMEOUT = max(2, int(os.environ.get("HTTP_TIMEOUT", "6")))
+DEFAULT_POOL_URL = os.environ.get("DEFAULT_POOL_URL", "https://supportxmr.com").strip()
+DEFAULT_WALLET = os.environ.get("DEFAULT_WALLET", "").strip()
+AUTO_ADD_LOCAL_MINER = os.environ.get("AUTO_ADD_LOCAL_MINER", "0") == "1"
+DEFAULT_MINER_NAME = os.environ.get("DEFAULT_MINER_NAME", "ZimaOS").strip() or "ZimaOS"
+DEFAULT_MINER_API = os.environ.get("DEFAULT_MINER_API", "http://host.docker.internal:18088").strip()
+DEFAULT_AGENT_URL = os.environ.get("DEFAULT_AGENT_URL", "http://host.docker.internal:18089").strip()
 USER_AGENT = "xmrig.webui/1.0 (+https://github.com/danyx64/xmrig.webui)"
 
 app = Flask(__name__)
@@ -59,8 +65,15 @@ def init_db():
         CREATE INDEX IF NOT EXISTS idx_samples_ts ON samples(ts);
         CREATE INDEX IF NOT EXISTS idx_samples_miner_ts ON samples(miner_id, ts);
         """)
-        for key, value in {"pool_url":"https://supportxmr.com","wallet":""}.items():
+        for key, value in {"pool_url": DEFAULT_POOL_URL, "wallet": DEFAULT_WALLET}.items():
             conn.execute("INSERT OR IGNORE INTO settings(key,value) VALUES (?,?)",(key,value))
+        if AUTO_ADD_LOCAL_MINER:
+            count = conn.execute("SELECT COUNT(*) AS n FROM miners").fetchone()["n"]
+            if count == 0:
+                conn.execute(
+                    "INSERT INTO miners(name,api_url,agent_url,token,enabled,created_at) VALUES (?,?,?,?,1,?)",
+                    (DEFAULT_MINER_NAME, DEFAULT_MINER_API, DEFAULT_AGENT_URL, "", now_ts()),
+                )
         conn.commit()
 
 def get_settings():
