@@ -38,6 +38,8 @@ services:
     restart: unless-stopped
     privileged: true
     network_mode: host
+    environment:
+      XMRIG_THREADS: ${XMRIG_THREADS:-all}
     volumes:
       - /dev/cpu:/dev/cpu
     ulimits:
@@ -96,7 +98,7 @@ x-casaos:
   category: Finance
   architectures:
     - amd64
-  version: "0.2.0"
+  version: "0.3.0"
   update_at: "2026-09-22"
   website: https://github.com/danyx64/xmrig.webui
   repo: https://github.com/danyx64/xmrig.webui

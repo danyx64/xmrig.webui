@@ -15,4 +15,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates libuv1 libhwloc15 libssl3 \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=build /src/build/xmrig /usr/local/bin/xmrig
-ENTRYPOINT ["/usr/local/bin/xmrig"]
+COPY miner/entrypoint.sh /usr/local/bin/xmrig-entrypoint
+RUN chmod +x /usr/local/bin/xmrig-entrypoint
+ENV XMRIG_THREADS=auto
+ENTRYPOINT ["/usr/local/bin/xmrig-entrypoint"]

@@ -130,6 +130,7 @@ XMRIG_VERSION=6.26.0
 XMR_POOL=pool.supportxmr.com:3333
 XMR_WALLET=YOUR_MONERO_WALLET
 WORKER_NAME=my-worker
+XMRIG_THREADS=all
 CPU_THREADS_HINT=100
 ```
 
@@ -140,6 +141,20 @@ docker compose up -d --build
 ```
 
 The worker stack uses host networking so its APIs are available on `18088` and `18089`.
+
+### CPU thread mode
+
+The miner image supports `XMRIG_THREADS`:
+
+```text
+XMRIG_THREADS=all   # force one XMRig thread per logical CPU visible to Docker
+XMRIG_THREADS=auto  # use XMRig automatic RandomX thread selection
+XMRIG_THREADS=8     # force exactly 8 threads
+```
+
+`all` is implemented at container start with `nproc`, so it follows the CPUs actually visible to the container. Docker has no CPU quota in the supplied miner Compose files, so by default all host CPUs are visible.
+
+For RandomX, forcing every logical CPU is not guaranteed to produce the highest hashrate: cache capacity can make XMRig's automatic profile faster even when it uses fewer threads. Use `all` when the goal is maximum CPU occupancy; benchmark `auto` versus `all` when the goal is maximum H/s.
 
 ### MSR and Huge Pages
 

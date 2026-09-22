@@ -27,7 +27,7 @@ jobs:
           docker compose -f docker-compose.agent.yml config -q
           XMR_WALLET=dummy docker compose -f worker-stack/docker-compose.yml config -q
           WEBUI_PORT=8080 docker compose -f Apps/XMRigWebUI/docker-compose.yml config -q
-          WEBUI_PORT=8080 XMR_WALLET=dummy docker compose -f Apps/XMRigWebUI/docker-compose.full.yml config -q
+          WEBUI_PORT=8080 XMR_WALLET=dummy docker compose -f Apps/XMRigWebUI/docker-compose.full.yml config -q\n          XMR_WALLET=dummy docker compose -f Apps/XMRigNode/docker-compose.yml config -q
 
   dashboard:
     if: github.event_name != 'pull_request'
