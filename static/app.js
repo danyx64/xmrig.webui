@@ -1,18 +1,203 @@
-const $=id=>document.getElementById(id);
-const fmtRate=value=>{value=Number(value||0);const units=["H/s","kH/s","MH/s","GH/s"];let i=0;while(value>=1000&&i<units.length-1){value/=1000;i++}return `${value.toLocaleString(undefined,{maximumFractionDigits:value>=100?0:value>=10?1:2})} ${units[i]}`};
-const fmtXmr=v=>`${Number(v||0).toLocaleString(undefined,{minimumFractionDigits:6,maximumFractionDigits:12})} XMR`;
-const esc=s=>String(s??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]));
-async function api(url,options={}){const res=await fetch(url,{headers:{"Content-Type":"application/json"},...options});const data=await res.json().catch(()=>({}));if(!res.ok)throw new Error(data.error||`${res.status} ${res.statusText}`);return data}
-function toast(message,error=false){const el=$("toast");el.textContent=message;el.className=`toast show${error?" error":""}`;clearTimeout(el._timer);el._timer=setTimeout(()=>el.className="toast",2800)}
-async function loadAll(){try{$("refreshState").textContent="Aggiornamento…";const [data]=await Promise.all([api("/api/overview")]);renderOverview(data);await loadHistory();$("refreshState").textContent=`Aggiornato ${new Date(data.refreshed_at*1000).toLocaleTimeString()}`}catch(e){$("refreshState").textContent="Errore aggiornamento";toast(e.message,true)}}
-function renderOverview(data){const pool=data.pool||{},t=data.totals||{};$("pendingXmr").textContent=pool.configured?fmtXmr(pool.pending_xmr):"—";$("paidXmr").textContent=pool.configured?fmtXmr(pool.paid_xmr):"—";$("poolHashrate").textContent=pool.online?fmtRate(pool.hashrate):"—";$("localHashrate").textContent=fmtRate(t.hashrate);$("onlineMiners").textContent=`${t.online||0}/${t.configured||0}`;$("configuredMiners").textContent=`${t.configured||0} configurati`;$("maxTemp").textContent=t.max_temp_c==null?"—":`${Number(t.max_temp_c).toFixed(1)} °C`;$("poolName").textContent=pool.pool||"Pool non configurata";$("poolStatus").textContent=pool.online?"online":pool.configured?"errore":"non configurata";$("poolStatus").className=`status ${pool.online?"ok":pool.configured?"bad":"neutral"}`;$("detailPool").textContent=pool.pool_url||"—";$("detailApi").textContent=pool.api_base||"—";$("detailValid").textContent=Number(pool.valid_shares||0).toLocaleString();$("detailInvalid").textContent=Number(pool.invalid_shares||0).toLocaleString();$("detailHashes").textContent=Number(pool.total_hashes||0).toLocaleString();renderMiners(data.miners||[]);renderPoolWorkers(pool.workers||[]);if(pool.error)$("poolStatus").title=pool.error}
-function renderMiners(items){const body=$("minersBody");if(!items.length){body.innerHTML='<tr><td colspan="9" class="empty">Nessun server configurato</td></tr>';return}body.innerHTML=items.map(m=>`<tr><td><div class="server-name">${esc(m.name)}</div><div class="server-sub">${esc(m.api_url)}</div></td><td><span class="status ${m.online?"ok":"bad"}">${m.online?"online":"offline"}</span></td><td>${m.online?fmtRate(m.hashrate_10s):"—"}</td><td>${m.online?fmtRate(m.hashrate_60s):"—"}</td><td>${m.online?fmtRate(m.hashrate_15m):"—"}</td><td>${m.temperature_c==null?"—":`${Number(m.temperature_c).toFixed(1)} °C`}</td><td>${m.online?`${Number(m.accepted||0).toLocaleString()} / ${Number(m.rejected||0).toLocaleString()}`:"—"}</td><td>${esc(m.pool||"—")}</td><td><button class="danger-link" onclick="removeMiner(${m.id})">Rimuovi</button></td></tr>`).join("")}
-function renderPoolWorkers(items){const body=$("poolWorkersBody");if(!items.length){body.innerHTML='<tr><td colspan="5" class="empty">Nessun worker restituito dalla pool</td></tr>';return}body.innerHTML=items.map(w=>`<tr><td>${esc(w.name)}</td><td>${fmtRate(w.hashrate)}</td><td>${esc(w.algo||"—")}</td><td>${Number(w.valid||0).toLocaleString()}</td><td>${Number(w.invalid||0).toLocaleString()}</td></tr>`).join("")}
-async function loadHistory(){const rows=await api(`/api/history?hours=${$("historyHours").value}`);const grouped=new Map();for(const r of rows){const bucket=Math.floor(r.ts/60)*60;if(!grouped.has(bucket))grouped.set(bucket,{ts:bucket,hash:0,temps:[]});const g=grouped.get(bucket);g.hash+=Number(r.hashrate||0);if(r.temp_c!=null)g.temps.push(Number(r.temp_c))}const points=[...grouped.values()].sort((a,b)=>a.ts-b.ts).map(g=>({ts:g.ts,hash:g.hash,temp:g.temps.length?Math.max(...g.temps):null}));drawChart($("hashChart"),points.map(p=>({x:p.ts,y:p.hash})),v=>fmtRate(v));drawChart($("tempChart"),points.filter(p=>p.temp!=null).map(p=>({x:p.ts,y:p.temp})),v=>`${v.toFixed(0)} °C`)}
-function drawChart(canvas,points,formatter){const dpr=window.devicePixelRatio||1,rect=canvas.getBoundingClientRect();canvas.width=Math.max(300,rect.width*dpr);canvas.height=210*dpr;const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);const w=canvas.width/dpr,h=canvas.height/dpr,p={l:55,r:14,t:14,b:28};ctx.clearRect(0,0,w,h);ctx.strokeStyle="#202b3a";ctx.fillStyle="#7f90a7";ctx.font="11px system-ui";ctx.lineWidth=1;if(!points.length){ctx.fillText("Nessun campione ancora",p.l,h/2);return}const ys=points.map(x=>x.y);let minY=Math.min(...ys),maxY=Math.max(...ys);if(maxY===minY){minY=0;maxY=Math.max(1,maxY*1.2)}const minX=points[0].x,maxX=points[points.length-1].x||minX+1;for(let i=0;i<4;i++){const y=p.t+(h-p.t-p.b)*i/3;ctx.beginPath();ctx.moveTo(p.l,y);ctx.lineTo(w-p.r,y);ctx.stroke();const val=maxY-(maxY-minY)*i/3;ctx.fillText(formatter(val),4,y+4)}ctx.strokeStyle="#ff7a18";ctx.lineWidth=2;ctx.beginPath();points.forEach((x,i)=>{const px=p.l+(w-p.l-p.r)*(x.x-minX)/Math.max(1,maxX-minX),py=p.t+(h-p.t-p.b)*(1-(x.y-minY)/Math.max(.0001,maxY-minY));i?ctx.lineTo(px,py):ctx.moveTo(px,py)});ctx.stroke()}
-async function openSettings(){const s=await api("/api/settings");$("poolUrl").value=s.pool_url||"";$("wallet").value=s.wallet||"";$("settingsDialog").showModal()}
-async function saveSettings(){try{await api("/api/settings",{method:"PUT",body:JSON.stringify({pool_url:$("poolUrl").value,wallet:$("wallet").value})});$("settingsDialog").close();toast("Impostazioni salvate");loadAll()}catch(e){toast(e.message,true)}}
-function openMiner(){$("minerName").value="";$("minerApi").value="";$("minerAgent").value="";$("minerToken").value="";$("minerDialog").showModal()}
-async function saveMiner(){try{await api("/api/miners",{method:"POST",body:JSON.stringify({name:$("minerName").value,api_url:$("minerApi").value,agent_url:$("minerAgent").value,token:$("minerToken").value})});$("minerDialog").close();toast("Server aggiunto");loadAll()}catch(e){toast(e.message,true)}}
-async function removeMiner(id){if(!confirm("Rimuovere questo server e il suo storico?"))return;try{await api(`/api/miners/${id}`,{method:"DELETE"});toast("Server rimosso");loadAll()}catch(e){toast(e.message,true)}}
-window.removeMiner=removeMiner;$("refreshBtn").addEventListener("click",loadAll);$("settingsBtn").addEventListener("click",openSettings);$("saveSettings").addEventListener("click",saveSettings);$("addMinerBtn").addEventListener("click",openMiner);$("saveMiner").addEventListener("click",saveMiner);$("historyHours").addEventListener("change",loadHistory);loadAll();setInterval(loadAll,30000);
+const $ = (id) => document.getElementById(id);
+
+const fmtRate = (value) => {
+  value = Number(value || 0);
+  const units = ["H/s", "kH/s", "MH/s", "GH/s"];
+  let i = 0;
+  while (value >= 1000 && i < units.length - 1) {
+    value /= 1000;
+    i++;
+  }
+  return `${value.toLocaleString(undefined, {
+    maximumFractionDigits: value >= 100 ? 0 : value >= 10 ? 1 : 2
+  })} ${units[i]}`;
+};
+
+const fmtXmr = (v) =>
+  `${Number(v || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 6,
+    maximumFractionDigits: 12
+  })} XMR`;
+
+const esc = (s) =>
+  String(s ?? "").replace(/[&<>'"]/g, (c) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "'": "&#39;",
+    '"': "&quot;"
+  }[c]));
+
+async function api(url, options = {}) {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+    ...options
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `${res.status} ${res.statusText}`);
+  return data;
+}
+
+function toast(message, error = false) {
+  const el = $("toast");
+  el.textContent = message;
+  el.className = `toast show${error ? " error" : ""}`;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => (el.className = "toast"), 2800);
+}
+
+function renderMiners(items) {
+  const body = $("minersBody");
+  if (!items.length) {
+    body.innerHTML = '<tr><td colspan="9" class="empty">Nessun server configurato</td></tr>';
+    return;
+  }
+  body.innerHTML = items.map((m) => `
+    <tr>
+      <td>
+        <div class="server-name">${esc(m.name)}</div>
+        <div class="server-sub">${esc(m.api_url)}</div>
+      </td>
+      <td><span class="status ${m.online ? "ok" : "bad"}">${m.online ? "online" : "offline"}</span></td>
+      <td>${m.online ? fmtRate(m.hashrate_10s) : "—"}</td>
+      <td>${m.online ? fmtRate(m.hashrate_60s) : "—"}</td>
+      <td>${m.online ? fmtRate(m.hashrate_15m) : "—"}</td>
+      <td>${m.temperature_c != null ? `${Number(m.temperature_c).toFixed(1)} °C` : "—"}</td>
+      <td>${m.online ? `${Number(m.accepted || 0).toLocaleString()} / ${Number(m.rejected || 0).toLocaleString()}` : "—"}</td>
+      <td>${esc(m.pool || "—")}</td>
+      <td><button class="link-danger" onclick="removeMiner(${m.id})">Rimuovi</button></td>
+    </tr>
+  `).join("");
+}
+
+function renderPoolWorkers(items) {
+  const body = $("poolWorkersBody");
+  if (!items.length) {
+    body.innerHTML = '<tr><td colspan="5" class="empty">Nessun worker disponibile</td></tr>';
+    return;
+  }
+  body.innerHTML = items.map((w) => `
+    <tr>
+      <td>${esc(w.name)}</td>
+      <td>${fmtRate(w.hashrate)}</td>
+      <td>${esc(w.algo || "—")}</td>
+      <td>${Number(w.valid || 0).toLocaleString()}</td>
+      <td>${Number(w.invalid || 0).toLocaleString()}</td>
+    </tr>
+  `).join("");
+}
+
+function renderOverview(data) {
+  const pool = data.pool || {};
+  const totals = data.totals || {};
+
+  $("localHashrate").textContent = fmtRate(totals.hashrate);
+  $("poolHashrate").textContent = pool.online ? fmtRate(pool.hashrate) : "—";
+  $("pendingXmr").textContent = pool.configured ? fmtXmr(pool.pending_xmr) : "—";
+  $("paidXmr").textContent = pool.configured ? fmtXmr(pool.paid_xmr) : "—";
+  $("onlineMiners").textContent = `${totals.online || 0}/${totals.configured || 0}`;
+  $("maxTemp").textContent = totals.max_temp_c != null ? `${Number(totals.max_temp_c).toFixed(1)} °C` : "—";
+
+  $("detailPool").textContent = pool.pool_url || "—";
+  $("detailApi").textContent = pool.api_base || "—";
+  $("detailWallet").textContent = pool.wallet || "—";
+  $("detailValid").textContent = Number(pool.valid_shares || 0).toLocaleString();
+  $("detailInvalid").textContent = Number(pool.invalid_shares || 0).toLocaleString();
+  $("detailHashes").textContent = Number(pool.total_hashes || 0).toLocaleString();
+
+  $("poolStatus").textContent = pool.online ? "online" : (pool.configured ? "errore" : "non configurata");
+  $("poolStatus").className = `status ${pool.online ? "ok" : pool.configured ? "bad" : "neutral"}`;
+
+  renderMiners(data.miners || []);
+  renderPoolWorkers(pool.workers || []);
+}
+
+async function loadAll() {
+  try {
+    $("refreshState").textContent = "Aggiornamento…";
+    const data = await api("/api/overview");
+    renderOverview(data);
+    $("refreshState").textContent =
+      `Aggiornato ${new Date(data.refreshed_at * 1000).toLocaleTimeString()}`;
+  } catch (e) {
+    $("refreshState").textContent = "Errore aggiornamento";
+    toast(e.message, true);
+  }
+}
+
+async function openSettings() {
+  try {
+    const s = await api("/api/settings");
+    $("poolUrl").value = s.pool_url || "";
+    $("wallet").value = s.wallet || "";
+    $("settingsDialog").showModal();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function saveSettings() {
+  try {
+    await api("/api/settings", {
+      method: "PUT",
+      body: JSON.stringify({
+        pool_url: $("poolUrl").value,
+        wallet: $("wallet").value
+      })
+    });
+    $("settingsDialog").close();
+    toast("Impostazioni salvate");
+    loadAll();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+function openMiner() {
+  $("minerName").value = "";
+  $("minerApi").value = "";
+  $("minerAgent").value = "";
+  $("minerToken").value = "";
+  $("minerDialog").showModal();
+}
+
+async function saveMiner() {
+  try {
+    await api("/api/miners", {
+      method: "POST",
+      body: JSON.stringify({
+        name: $("minerName").value,
+        api_url: $("minerApi").value,
+        agent_url: $("minerAgent").value,
+        token: $("minerToken").value
+      })
+    });
+    $("minerDialog").close();
+    toast("Server aggiunto");
+    loadAll();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function removeMiner(id) {
+  if (!confirm("Rimuovere questo server?")) return;
+  try {
+    await api(`/api/miners/${id}`, { method: "DELETE" });
+    toast("Server rimosso");
+    loadAll();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+window.removeMiner = removeMiner;
+
+$("refreshBtn").addEventListener("click", loadAll);
+$("settingsBtn").addEventListener("click", openSettings);
+$("saveSettings").addEventListener("click", saveSettings);
+$("addMinerBtn").addEventListener("click", openMiner);
+$("saveMiner").addEventListener("click", saveMiner);
+
+loadAll();
+setInterval(loadAll, 30000);
